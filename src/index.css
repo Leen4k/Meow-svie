@@ -19,6 +19,10 @@ span{
   color: #B4D429;
 }
 
+button{
+  font-weight: bold;
+}
+
 .active{
   background: #B4D429;
   color: black!important;
