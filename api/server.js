@@ -2,15 +2,18 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const port = 4000;
-
 const admin = require('firebase-admin');
 const credentials = require('./key.json');
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const jwtSecret = "asdash2eirh2i";
+const cookieParser = require("cookie-parser")
 
 
 
 app.use(cors({ 
     credentials: true,
-    origin: "http://localhost:3000"
+    origin: "http://localhost:3000",
 })) ;
 
 admin.initializeApp({
@@ -22,7 +25,110 @@ const db = admin.firestore();
 
 
 app.use(express.json());
+app.use(cookieParser());
 app.use(express.urlencoded({extended:true}));
+
+//logout
+app.post("/logout-admin",(req,res) => {
+    res.cookie("token","").json(true);
+})
+
+app.get("/admin-profile", async (req, res) => {
+    const {token} = req.cookies;
+    if(token){
+        jwt.verify(token, jwtSecret, {}, (err,data)=>{
+            if (err) throw err;
+            res.json(data); 
+        })
+    }else{
+        res.json(null);
+    }
+})
+
+
+app.get("/admins", async (req, res) => {
+    try{
+        const adminRef = db.collection("admins");
+        const response = await adminRef.get();
+        const responseArr = [];
+        response.forEach(doc => {
+            responseArr.push(doc.data());
+        })
+        res.json(responseArr);
+    }catch(err){
+        res.json(err);
+        console.log(err)
+    }
+})
+
+app.post("/login-admin", async (req, res) => {
+    const {email, password} = req.body;
+    const adminDoc = db.collection("admins");
+    const response = await adminDoc.where("email","==",email).get();
+    if(!response.empty){
+        
+        const responseArr = [];
+        let adminPassword;
+        let userDoc;
+        
+        response.forEach(doc => {
+            responseArr.push(doc.data());   
+            userDoc = doc.data();    
+            adminPassword = doc.data().password;
+        })            
+        
+        const passOk = bcrypt.compareSync(password,adminPassword)
+
+        if(passOk){
+            jwt.sign({email:userDoc.email, id:userDoc.admin_id, name:userDoc.name, photo:userDoc.photo}, jwtSecret, {}, (err,token) => {
+                 if(err) throw err;
+                 res.cookie("token", token).json(userDoc);
+            })
+        }else{ 
+            res.status(422).json("pass not ok")
+        }
+
+    }else{
+        res.status(422).json("no user found");
+        console.log("hikhik")
+    }
+})
+
+
+app.post("/register-admin", async (req, res) => {
+    try {
+        const { name, email, password, photo } = req.body
+        const bcryptSalt = await bcrypt.genSalt(10);
+
+        const response = await db.collection("admins").where("email","==",email).get();
+        if(!response.empty){
+            console.log(response);
+            res.status(409).json("user already registered");        
+        }else{
+            const documentRef = admin.firestore()
+            .collection("admins")
+            .doc();
+
+            const adminDoc = await admin.firestore()
+                .collection("admins")
+                .doc(documentRef.id)
+                .set({
+                    admin_id: documentRef.id,
+                    name,
+                    email,
+                    photo,
+                    password: bcrypt.hashSync(password, bcryptSalt)
+                });
+
+            res.status(200).json("ok");
+        }
+
+
+    } catch (err) {
+        res.status(422).json(err);
+        console.log(err)
+    }
+});
 
 app.delete("/event/:event_id", async (req, res) => {
     const {event_id} = req.params
@@ -118,7 +224,7 @@ app.post("/event", async (req, res) => {
         .collection("events")
         .doc(documentRef.id)
         .set({cinema, date, movie_title, showTime:time, movie_id, movieImg, seats, startingRow, endingRow, seatsPerRow, event_id: documentRef.id })
-        // const response = await db.collection("events").add({cinema, date, movie_title, showTime:time, movie_id, movieImg, seats, event_id:id, event_id:documentRef.id});
+
         res.json(response)
         console.log(response)
     }catch(err){

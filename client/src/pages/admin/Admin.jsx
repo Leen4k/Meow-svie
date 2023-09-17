@@ -5,16 +5,23 @@ import { motion } from 'framer-motion'
 import axios from 'axios'
 import { BookingContext } from '../../contexts/BookingContext'
 import { PiBuildingsFill } from 'react-icons/pi'
+import { AdminContext } from '../../contexts/AdminContext'
+import { MovieContext } from '../../contexts/MovieContext'
+import Loading from '../../components/Loading'
 
 const Admin = () => {
   const [today, setToday] = useState("");
   const [cinemas, setCinemas] = useState([]);
   const {cinemaID, setCinemaId} = useContext(BookingContext);
+  const {admin, setAdmin} = useContext(AdminContext);
+  const {loading, setLoading} = useContext(MovieContext);
 
   useEffect(()=>{
+    setLoading(true);
     axios.get("/cinema").then(({data})=>{
       console.log(data)
       setCinemas(data)
+      setLoading(false);
     }).catch((err)=>{console.log(err)});
   },[])
 
@@ -36,6 +43,11 @@ const Admin = () => {
   useEffect(()=>{
     getCurrentDate();
   },[])
+
+  if(loading){
+    return <Loading />
+  }
+
   return (
       <section className="col-span-6 px-8">
 
@@ -43,7 +55,7 @@ const Admin = () => {
                 <h2 className="py-[.7rem]">Manage Cinema</h2>
                   <motion.div layout className="flex flex-col gap-2">
                      
-                          <Link to={`/admin/manageCinema`} className="flex items-center gap-2 justify-between cursor-pointer bg-gray-400 rounded-md bg-clip-padding backdrop-filter backdrop-blur-sm bg-opacity-10 px-2">
+                          <Link to={`/admin/manageCinemaDetails`} className="flex items-center gap-2 justify-between cursor-pointer bg-gray-400 rounded-md bg-clip-padding backdrop-filter backdrop-blur-sm bg-opacity-10 px-2">
                             <div className="flex items-center gap-2">
                               <div className="w-12 h-12 flex items-center justify-center"><PiBuildingsFill className="text-primary text-lg" /></div>
                               <h2>Manage Cinema</h2>
@@ -59,7 +71,7 @@ const Admin = () => {
                             <div className="flex items-center gap-2">
                               <div className="w-12 h-12 flex items-center"><img src={cinema.imageUrls[0]} alt="" /></div>
                               <h2>{cinema.cinema}</h2>
-                              <span>{cinema.cinema_id}</span>
+                              {/* <span>{cinema.cinema_id}</span> */}
                             </div>
                             <AiOutlineRight className="text-primary" />
                           </Link>

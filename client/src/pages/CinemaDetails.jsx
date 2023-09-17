@@ -7,6 +7,7 @@ import { MovieContext } from '../contexts/MovieContext';
 import axios from 'axios'
 import { BookingContext } from '../contexts/BookingContext';
 import { AuthContext } from '../contexts/AuthContext';
+import Loading from '../components/Loading';
 
 
 const CinemaDetails = () => {
@@ -30,17 +31,23 @@ const CinemaDetails = () => {
     const [endingRow, setEndingRow] = useState("D");
     const [seatsPerRow, setSeatsPerRow] = useState(10);
     const [expired, setExpired] = useState(false);
+    const {loading, setLoading} = useContext(MovieContext);
 
 
 
 
     useEffect(()=>{
+        
         const fetchData = async () => {
+            setLoading(true);
             await axios.get("/event").then(({data})=>{
-                setMovies(data);
+                setMovies(data);   
+                setLoading(false)
             })
+         
         }
         fetchData();
+       
     },[])
 
     useEffect(()=>{
@@ -216,6 +223,9 @@ const CinemaDetails = () => {
             return true; // Current time is before the target time
         }
       }
+
+
+      if(loading) return <Loading />
       
     
 

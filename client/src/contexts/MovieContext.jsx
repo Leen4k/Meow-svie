@@ -9,15 +9,16 @@ export const MovieContext = createContext();
 const MovieProvider = ({children}) => {
 
   const [movies, setMovies] = useState([]);
+  const [loading, setLoading] = useState(false);
   // const [title, setTitle] = useState("roth");
 
   useEffect(()=>{
 
     const fetchMovies = async () => {
       try{
-        const res = await axios.get("https://api.themoviedb.org/3/movie/popular?api_key=145419a56bbc65db41851853b9453890&language=en-US");
-        const data = await res.data;
-        const {results} = data
+        const res = await fetch("https://api.themoviedb.org/3/movie/popular?api_key=145419a56bbc65db41851853b9453890&language=en-US");
+        const data = await res.json();
+        const {results} = data;
         setMovies(results);
 
         //request the backend to map our data from the api's results
@@ -32,7 +33,7 @@ const MovieProvider = ({children}) => {
   },[]);
 
   return (
-    <MovieContext.Provider value={{movies, setMovies}}>{children}</MovieContext.Provider>
+    <MovieContext.Provider value={{movies, setMovies, loading, setLoading}}>{children}</MovieContext.Provider>
   )
 }
 

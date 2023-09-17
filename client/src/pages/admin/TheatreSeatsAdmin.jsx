@@ -20,6 +20,7 @@ const TheatreSeats = ({cinema,seats,time,setSeats,selectedSeats,setSelectedSeats
             return ("text-primary")
         }
     }
+    console.log(seats)
 
   return (
     <div
@@ -39,7 +40,7 @@ const TheatreSeats = ({cinema,seats,time,setSeats,selectedSeats,setSelectedSeats
         <button onClick={()=>{createSeats()}} className="cursor-pointer text-white z-50">អេក្រង់ <span>{cinema}</span> ម៉ោង <span>{time}</span></button>
         <div className="m-auto h-[20px] w-[80%] rounded-t-[100000000%] rounded-b-[100%] bg-gradient-to-b from-[#B4D429] via-blue-400">
         </div>
-        <div className={`grid grid-cols-${seatsPerRow} gap-y-2 place-items-center w-[55%] m-auto`}>
+        <div className={`grid grid-flow-row gap-y-2 place-items-center w-[55%] m-auto grid-cols-${parseInt(seatsPerRow)}`}>
             {seats?.length > 0 && seats.map((seat,index)=>(
                 <div key={seat.seatNumber} data-tip={seat.user && seat.user +", "+ seat.booking_id} className={`tooltip flex flex-col items-center text-2xl cursor-pointer`}>
                     <p className={`text-sm ${!seat.isVIP?"":"animate-pulse"}`}>{seat.seatNumber}</p>

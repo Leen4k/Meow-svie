@@ -9,12 +9,16 @@ import { AuthContext } from '../../contexts/AuthContext';
 import { BiAddToQueue, BiSolidChevronDown, BiTrashAlt } from 'react-icons/bi';
 import {FaLocationDot} from "react-icons/fa6"
 import {PiNotePencilDuotone} from "react-icons/pi"
+import {IoCloseCircleSharp} from "react-icons/io5"
 
 
 //firebase
 import { db, storage } from '../../firebase';
 import { uploadBytesResumable,uploadBytes,ref, getDownloadURL } from 'firebase/storage';
 import { BookingContext } from '../../contexts/BookingContext';
+import { FaStar } from 'react-icons/fa';
+import { AiFillStar } from 'react-icons/ai';
+import Loading from '../../components/Loading';
 
 
 
@@ -27,7 +31,7 @@ const ManageCinema = () => {
     const [selectedSeats, setSelectedSeats] = useState([]);
     const [book, setBook] = useState([]);
     const [total, setTotal] = useState(0);
-    const {movies,setMovies} = useContext(MovieContext);
+    const {movies,setMovies,loading,setLoading} = useContext(MovieContext);
     // console.log(movies)
     const [cinemaInfo, setCinemaInfo] = useState([]);
     const {isUpdated, setIsUpdated} = useContext(BookingContext);
@@ -52,10 +56,11 @@ const ManageCinema = () => {
 
 
     useEffect(()=>{
+        setLoading(true);
         axios.get("/cinema").then(({data})=>{
             setCinemaInfo(data);
-        }).catch(err => console.log(err));
-        
+            setLoading(false);
+        }).catch(err => console.log(err)); 
     },[])
 
     useEffect(()=>{
@@ -149,6 +154,9 @@ const ManageCinema = () => {
         if(params.cinema_id){
             try{
                 axios.put(`/cinema/${params.cinema_id}`,{cinema,location,screen,downloadUrls,seats, startingRow, endingRow, seatsPerRow}).then(()=>{
+                    axios.get("/cinema").then(({data})=>{
+                        setCinemaInfo(data);
+                    }).catch(err => console.log(err));
                     setIsUpdated(true); 
                     const timeout = setTimeout(() => {
                         setIsUpdated(false); 
@@ -172,16 +180,14 @@ const ManageCinema = () => {
 
   
     const handleImageChange = (e) => {
-
-            const selectedFiles = e.target.files;
-            setImages([...selectedFiles]);
-
+        const selectedFiles = e.target.files;
+        setImages([...selectedFiles]);
     };
 
 
     useEffect(() => {
         const uploadFile = async () => {
-          const downloadURLs = [];
+          const downloadURLs = [...downloadUrls];
     
           for (let i = 0; i < images.length; i++) {
             const image = images[i];
@@ -305,7 +311,8 @@ const ManageCinema = () => {
 
       
     const getSingleCinema = (cinema_id) =>{
-        navigate(`/admin/manageCinema/${cinema_id}`)
+        navigate(`/admin/manageCinemaDetails/${cinema_id}`)
+        setLoading(true);
         axios.get(`/cinema/${cinema_id}`).then(({data})=>{
             setCinema(data.cinema)
             setLocation(data.location)
@@ -314,15 +321,16 @@ const ManageCinema = () => {
             setSeats(data.seats);
             setStartingRow(data.startingRow)
             setEndingRow(data.endingRow)
-            setSeatsPerRow(data.seatsPerRow)
-        })  
+            setSeatsPerRow(data.seatsPerRow)      
+            setLoading(false); 
+        })     
     }
 
     const handleDelete = (cinema_id) => {
         axios.delete(`cinema/${cinema_id}`)
         const filterDeleted = cinemaInfo.filter((cinema)=>( cinema.cinema_id !== cinema_id));
         setCinemaInfo(filterDeleted);
-        navigate(`/admin/manageCinema`)
+        // navigate(`/admin/manage-cinema`)
     }
   
 
@@ -344,12 +352,24 @@ const ManageCinema = () => {
 
     const screenResolution = [{id:1,screen:"2D"},{id:2,screen:"3D"},{id:3,screen:"4DX"}]
 
+    const deletePhotos = (index) => {
+        const newArray = [...downloadUrls];
+        newArray.splice(index, 1);
+        setDownloadUrls(newArray);
+    }
+    console.log(downloadUrls)
 
-    
+    const setDefaultPhotos = (photo) => {
+        const otherPhotos = downloadUrls.filter(e => e !== photo)
+        const starPhoto = photo;
+        setDownloadUrls([starPhoto, ...otherPhotos])
+    }
+
+    if(loading) return <Loading />
 
   return (
     <section className="col-span-10 grid z-50 grid-cols-10 min-h-screen">
-        <div className="col-span-5 overflow-y-scroll overflow-x-hidden">
+        <div className="col-span-5 overflow-y-scroll overflow-x-hidden mb-8">
             <p className="px-[.7rem]">Manage CinemaDetail <span className="uppercase">{params.id}</span> <span>{day}</span></p>
             {<motion.div layout initial={{ opacity: 0, scale: 1 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} className="flex flex-col gap-4 z-[1000] mt-4">
                 {cinemaInfo.map((cinema)=>(
@@ -361,7 +381,7 @@ const ManageCinema = () => {
                         <p className="text-light">{cinema.cinema}</p>
                         <a href={`http://maps.google.com/?q=`+cinema.location} className="flex text-primary items-center gap-1 hover:underline"><FaLocationDot />{cinema.location}</a>
                         <div className="flex gap-2">
-                            <button onClick={(e)=>{e.preventDefault();getSingleCinema(cinema.cinema_id);window.location.reload();}} className="text-green-500 text-xl  py-1 mt-2 rounded-md"><PiNotePencilDuotone /></button>
+                            <button onClick={(e)=>{e.preventDefault();getSingleCinema(cinema.cinema_id);}} className="text-green-500 text-xl  py-1 mt-2 rounded-md"><PiNotePencilDuotone /></button>
                             <button onClick={(e)=>{e.preventDefault();handleDelete(cinema.cinema_id);}} className="text-red-500 text-xl py-1 mt-2 rounded-md"><BiTrashAlt /></button>
                         </div>
                     </div>
@@ -371,7 +391,7 @@ const ManageCinema = () => {
         </div>
         {
             <motion.div layout initial={{ opacity: 0, scale: 1 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} className={`col-span-5 px-4 overflow-y-scroll`}>
-                <h2 className="text-primary">Create Cinema</h2>
+                {params.cinema_id ?<h2 className="text-primary">Update Cinema</h2>:<h2 className="text-primary">Create Cinema</h2>}
 
                 <form className="flex flex-col gap-4 text-sm mt-4 mb-8" action="">
                     <div className="flex flex-1 flex-col gap-1">
@@ -435,9 +455,10 @@ const ManageCinema = () => {
                             </div>
                             <div  className="grid grid-rows-6 grid-cols-12 grid-flow-col gap-1">
                             {downloadUrls.map((url, index) => (                 
-                                <motion.div layout initial={{ opacity: 0, scale: 1 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} key={index} className={cssGrid(index)} >
+                                <motion.div layout initial={{ opacity: 0, scale: 1 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} key={index} className={cssGrid(index)+" relative"} >
                                     <img className="object-cover aspect-square h-full w-full" src={url} alt={`Image ${index}`} />
-                                    <button></button>
+                                    <motion.button whileHover={{ scale: .90 }} whileTap={{ scale: 0.9 }} onClick={(e)=>{e.preventDefault();setDefaultPhotos(url)}} className="absolute left-0 top-0"><AiFillStar className="text-primary text-3xl" /></motion.button>
+                                    <motion.button whileHover={{ scale: .90 }} whileTap={{ scale: 0.9 }} onClick={(e)=>{e.preventDefault();deletePhotos(index)}} className="absolute right-0 top-0"><IoCloseCircleSharp className="text-primary text-3xl" /></motion.button>
                                 </motion.div>                                        
                             ))}
                             </div>   
@@ -474,13 +495,13 @@ const ManageCinema = () => {
                         </div>
                     </div>
                     <p>Theatre Details សម្រាប់ថ្ងៃ <span>{params.day}</span> ម៉ោង <span>{time}</span></p>
-                    <TheatreSeats cinema={params.id} time={time} movie_id={params.movie_id} seats={seats} setSeats={setSeats} selectedSeats={selectedSeats} setSelectedSeats={setSelectedSeats} seatsPerRow={seatsPerRow} total={total} setTotal={setTotal} createSeats={createSeats} handleSeat={handleSeat} />
+                    <TheatreSeats cinema={params.id} time={time} movie_id={params.movie_id} seats={seats} setSeats={setSeats} selectedSeats={selectedSeats} setSelectedSeats={setSelectedSeats} seatsPerRow={parseInt(seatsPerRow)} total={total} setTotal={setTotal} createSeats={createSeats} handleSeat={handleSeat} />
                     {/* create cinema */}
                     {params.cinema_id
                     ? 
-                    <button onClick={(e)=>{e.preventDefault();handleCinema();}} className="bg-primary py-2 rounded-md cursor-pointer z-50">Update Cinema</button>
+                    <motion.button whileHover={{ scale: .99 }} whileTap={{ scale: 0.9 }}  onClick={(e)=>{e.preventDefault();handleCinema();}} className="bg-primary py-2 rounded-md cursor-pointer z-50">Update Cinema</motion.button>
                     :
-                    <button onClick={(e)=>{e.preventDefault();handleCinema();}} className="bg-primary py-2 rounded-md cursor-pointer z-50">Create Cinema</button>
+                    <motion.button whileHover={{ scale: .99 }} whileTap={{ scale: 0.9 }}  onClick={(e)=>{e.preventDefault();handleCinema();}} className="bg-primary py-2 rounded-md cursor-pointer z-50">Create Cinema</motion.button>
                     }
                     
                 </form>
